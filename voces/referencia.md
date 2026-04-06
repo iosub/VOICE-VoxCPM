@@ -1,0 +1,1 @@
+¿Qué tal? ¿Cómo cómo estás? Es importante que escuches el audio y entiendas el tono que tengo de la voz, ¿vale? Hazlo bien.

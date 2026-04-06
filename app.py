@@ -1,16 +1,23 @@
 import os
 import sys
 import logging
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+if os.environ.get("MODELSCOPE_DOMAIN", "").strip() == "":
+    os.environ["MODELSCOPE_DOMAIN"] = "www.modelscope.cn"
+if os.environ.get("HF_REPO_ID", "").strip() == "":
+    os.environ["HF_REPO_ID"] = "openbmb/VoxCPM2"
+if sys.platform == "win32":
+    _ffmpeg_dir = os.environ.get("FFMPEG_DLL_DIR", r"C:\ffmpeg-shared")
+    if os.path.isdir(_ffmpeg_dir):
+        os.add_dll_directory(_ffmpeg_dir)
+
 import numpy as np
 import torch
 import gradio as gr
 from typing import Optional, Tuple
 from funasr import AutoModel
 from pathlib import Path
-
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
-if os.environ.get("HF_REPO_ID", "").strip() == "":
-    os.environ["HF_REPO_ID"] = "openbmb/VoxCPM2"
 
 import voxcpm
 
@@ -225,9 +232,10 @@ class VoxCPMDemo:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         logger.info(f"Running on device: {self.device}")
 
-        self.asr_model_id = "iic/SenseVoiceSmall"
+        self.asr_model_id = "FunAudioLLM/SenseVoiceSmall"
         self.asr_model: Optional[AutoModel] = AutoModel(
             model=self.asr_model_id,
+            hub="hf",
             disable_update=True,
             log_level="DEBUG",
             device="cuda:0" if self.device == "cuda" else "cpu",
@@ -263,7 +271,13 @@ class VoxCPMDemo:
         logger.info("Model not loaded, initializing...")
         model_dir = self._resolve_model_dir()
         logger.info(f"Using model dir: {model_dir}")
-        self.voxcpm_model = voxcpm.VoxCPM(voxcpm_model_path=model_dir, optimize=True)
+        zipenhancer_local = os.path.join("models", "iic", "speech_zipenhancer_ans_multiloss_16k_base")
+        zipenhancer_path = zipenhancer_local if os.path.isdir(zipenhancer_local) else None
+        self.voxcpm_model = voxcpm.VoxCPM(
+            voxcpm_model_path=model_dir,
+            zipenhancer_model_path=zipenhancer_path,
+            optimize=True,
+        )
         logger.info("Model loaded successfully.")
         return self.voxcpm_model
 
@@ -518,6 +532,7 @@ def run_demo(
         i18n=I18N,
         theme=_APP_THEME,
         css=_CUSTOM_CSS,
+        share=False,
     )
 
 
